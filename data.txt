@@ -1,0 +1,69 @@
+João B-PESSOA
+trabalha O
+na O
+Google B-ORGANIZACAO
+
+Maria B-PESSOA
+mora O
+em O
+Goiás B-LOCAL
+
+Pedro B-PESSOA
+estuda O
+na O
+UFG B-ORGANIZACAO
+
+UFCAT B-ORGANIZACAO
+é O
+uma O
+boa O
+universidade B-LOCAL
+
+Catalão B-LOCAL
+tem O
+muitos O
+juízes O
+
+O O
+STF B-ORGANIZACAO
+é O
+o O
+guardião O
+da O
+constituição O
+
+O O
+juiz O
+Carlos B-PESSOA
+decidiu O
+o O
+caso O
+no O
+Tribunal B-ORGANIZACAO
+de O
+Justiça B-ORGANIZACAO
+
+A O
+advogada O
+Ana B-PESSOA
+trabalha O
+no O
+STJ B-ORGANIZACAO
+
+O O
+processo O
+foi O
+enviado O
+para O
+o O
+Supremo B-ORGANIZACAO
+Tribunal B-ORGANIZACAO
+Federal B-ORGANIZACAO
+
+O O
+réu O
+José B-PESSOA
+foi O
+julgado O
+em O
+Brasília B-LOCAL
