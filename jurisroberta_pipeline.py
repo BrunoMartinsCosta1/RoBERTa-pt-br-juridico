@@ -28,9 +28,9 @@ OTIMIZAÇÕES DESTA VERSÃO:
     - Dataset pré-tokenizado salvo em Arrow (cache SSD)
 
 COMO USAR:
-  python jurisner_pipeline.py
-  python jurisner_pipeline.py --so-ner    # pula etapas 1-3, só roda NER
-  python jurisner_pipeline.py --inferir   # só roda inferência
+  python jurisroberta_pipeline.py
+  python jurisroberta_pipeline.py --so-ner    # pula etapas 1-3, só roda NER
+  python jurisroberta_pipeline.py --inferir   # só roda inferência
 """
 
 import os
@@ -295,10 +295,15 @@ def etapa3_mlm(cache_mlm_dir: str):
         fp16=not torch.cuda.is_bf16_supported(),
 
         eval_strategy="epoch",
-        save_strategy="epoch",
-        save_total_limit=1,          # mantém só 1 checkpoint → economiza SSD
+        # [ALTERADO] checkpoints a cada 1000 passos para poder RETOMAR o DAPT
+        # se o treino for interrompido (antes só salvava no fim da época).
+        save_strategy="steps",
+        save_steps=1000,
+        save_total_limit=2,
 
-        load_best_model_at_end=True,
+        # [ALTERADO] com 1 época o modelo final já é o do último passo;
+        # load_best_model_at_end exigiria save == eval strategy.
+        load_best_model_at_end=False,
         logging_steps=200,
         warmup_ratio=0.05,
         weight_decay=0.01,
@@ -326,8 +331,14 @@ def etapa3_mlm(cache_mlm_dir: str):
         processing_class=tokenizer,
     )
 
+    # [ALTERADO] retoma do último checkpoint, se existir
+    from transformers.trainer_utils import get_last_checkpoint
+    ultimo_ckpt = get_last_checkpoint(str(DIR_MLM)) if DIR_MLM.exists() else None
+    if ultimo_ckpt:
+        log.info(f"Retomando o DAPT a partir de: {ultimo_ckpt}")
     log.info("Iniciando DAPT/MLM...")
-    trainer.train()
+    trainer.train(resume_from_checkpoint=ultimo_ckpt)
+    trainer.save_state()   # [ALTERADO] grava trainer_state.json final (com eval_loss) em mlm/
 
     model.save_pretrained(str(DIR_MLM))
     tokenizer.save_pretrained(str(DIR_MLM))

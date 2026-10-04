@@ -1,251 +1,73 @@
-# RoBERTa-pt-br-juridico
-a RoBERTa model trained on Brazilian legal data from the Ulysses Tesemo corpus
+# JurisNER — DAPT de BERTimbau e XLM-RoBERTa para NER jurídico em português
 
-# JurisNER — Reconhecimento de Entidades Nomeadas no Domínio Jurídico Brasileiro
+Código da monografia **"Adaptação de Domínio de Modelos Transformer para Reconhecimento de Entidades Nomeadas Jurídicas: uma Comparação entre BERTimbau e XLM-RoBERTa"** (Bruno Martins Costa, Ciência da Computação, UFCAT).
 
-> Trabalho de Conclusão de Curso (PFC2) — Bacharelado em Ciências da Computação  
-> Universidade Federal de Catalão (UFCAT) — 2025  
-> **Autor:** Bruno Martins Costa  
-> **Orientador:** Prof. Dr. Marcio de Souza Dias
+Compara `neuralmind/bert-base-portuguese-cased` (BERTimbau) e `xlm-roberta-base`, com e sem **Domain Adaptive Pretraining (DAPT)** sobre o corpus Ulysses-Tesemô, no NER do **LeNER-Br** (6 categorias: JURISPRUDÊNCIA, LEGISLAÇÃO, LOCAL, ORGANIZAÇÃO, PESSOA, TEMPO).
 
----
+## Resultado principal
 
-## Sobre o Projeto
+F1 micro no teste do LeNER-Br, média ± desvio-padrão de 5 sementes do ajuste fino (o DAPT foi executado **uma vez** por modelo):
 
-Este repositório contém o pipeline completo do **JurisNER**, um projeto que compara o desempenho de duas arquiteturas Transformer em tarefas de **Reconhecimento de Entidades Nomeadas (NER)** no domínio jurídico brasileiro:
+| Modelo | Sem DAPT | Com DAPT | Δ (DAPT) | p (Welch) |
+|---|---|---|---|---|
+| BERTimbau | 89,08 ± 0,54 | 89,34 ± 0,73 | +0,25 p.p. | 0,55 |
+| XLM-RoBERTa | 89,57 ± 0,69 | 90,31 ± 0,62 | +0,74 p.p. | 0,11 |
 
-| Modelo | HuggingFace |
-|--------|-------------|
-| **BERTimbau** | `neuralmind/bert-base-portuguese-cased` |
-| **XLM-RoBERTa** | `xlm-roberta-base` |
+Entre modelos, com DAPT: −0,98 p.p. para o BERTimbau (p = 0,053); sem DAPT: −0,49 p.p. (p = 0,25).
 
-A abordagem utiliza **Domain Adaptive Pretraining (DAPT)** — os modelos são submetidos a um pré-treinamento adicional com o corpus jurídico **Ulysses Tesemô** antes do fine-tuning de NER no dataset **LENER-Br**.
+**Leitura honesta:** o benefício do DAPT foi pequeno e não significativo com 5 sementes, e a vantagem do XLM-RoBERTa fica no limite da significância. Diferenças abaixo de ~1 p.p. não devem ser interpretadas como superioridade de um modelo. Tabelas completas (por entidade e por semente) em [`results/resumo_multiseed.md`](results/resumo_multiseed.md).
 
----
+Limitações: uma execução de DAPT por modelo (1 época), 5 sementes, um único conjunto de dados.
 
-## Resultados
-
-Avaliação no conjunto de teste do LENER-Br (F1-score):
-
-| Entidade | BERTimbau | XLM-RoBERTa |
-|---|---|---|
-| **JURISPRUDÊNCIA** | — | **0.867** |
-| **LEGISLAÇÃO** | — | **0.957** |
-| **LOCAL** | — | 0.673 |
-| **ORGANIZAÇÃO** | — | 0.857 |
-| **PESSOA** | — | **0.944** |
-| **TEMPO** | — | **0.960** |
-| **F1 Geral (micro)** | **0.9027** | **0.9021** |
-| **F1 Macro** | — | 0.876 |
-
-> Os dois modelos apresentam desempenho competitivo e comparável ao estado da arte para NER jurídico em português, com vantagens complementares por categoria de entidade.
-
----
-
-## Estrutura do Repositório
+## Estrutura
 
 ```
-JurisNER/
-├── tesemo_pipeline.py        # Limpeza e deduplicação do corpus Tesemô
-├── jurisroberta_pipeline.py  # Pipeline completo: DAPT + NER (BERT e RoBERTa)
-├── setup.bat                 # Instalação das dependências (Windows)
-├── requirements.txt          # Dependências Python
-├── .gitignore
-└── README.md
+tesemo_pipeline.py          # limpeza/deduplicação do Tesemô (tamanho, idioma, SHA-256, MinHash LSH)
+jurisroberta_pipeline.py    # corpus -> tokenização -> DAPT (MLM) -> NER (retomável)
+ner_multiseed.py            # NER com várias sementes, com e sem DAPT; agrega e testa
+requirements.txt            # versões exatas usadas
+results/resumo_multiseed.md # resultados finais
+legado/                     # pipeline antigo (ver nota abaixo)
 ```
 
-> **Nota:** As pastas `tesemo_raw/`, `tesemo_clean/` e `experimentos/` não estão no repositório por serem muito grandes (>30 GB). Siga o guia abaixo para reproduzir os experimentos.
+`legado/jurisner_pipeline_antigo.py` é o script usado na primeira rodada do BERTimbau, que **não** usava o mesmo pipeline do XLM-RoBERTa; seus resultados não são comparáveis e não entram nas conclusões.
 
----
+## Reproduzir
 
-## Como Reproduzir
-
-### 1. Pré-requisitos
-
-- Python 3.10+
-- CUDA 12.x (GPU NVIDIA recomendada — testado em RTX 5060 Ti 16GB)
-- ~100 GB de espaço em disco
-- Windows 10/11 ou Linux
-
-### 2. Clonar o repositório
+Ambiente dos experimentos: Windows 11, RTX 5060 Ti 16 GB (bf16), Ryzen 7 5700X, 16 GB RAM; `transformers 5.6.2`, `torch 2.11.0+cu128`.
 
 ```bash
-git clone https://github.com/SEU_USUARIO/JurisNER.git
-cd JurisNER
+python -m venv venv && venv\Scripts\activate      # Linux: source venv/bin/activate
+python -m pip install -r requirements.txt
 ```
 
-### 3. Criar ambiente virtual e instalar dependências
+1. **Corpus.** Baixe o Ulysses-Tesemô (ver [artigo](https://doi.org/10.1007/s10579-024-09762-8)) em `tesemo_raw/` e rode `python tesemo_pipeline.py` (gera `tesemo_clean/`; 796.402 documentos, 13,17 GB após a curadoria).
+2. **DAPT + NER (uma execução por modelo).** Em `jurisroberta_pipeline.py`, defina `TIPO_MODELO = "bert"` ou `"roberta"` e rode `python jurisroberta_pipeline.py`. Opções: `--so-ner` (pula DAPT, usa `experimentos/<modelo>/mlm`), `--inferir`. O DAPT salva checkpoints a cada 1000 passos e retoma sozinho se o processo for interrompido. Tempos observados: DAPT ≈ 6 h 25 (BERTimbau) e ≈ 10 h 16 (XLM-R); NER ≈ 26 min e ≈ 11 min.
+3. **Sementes e baseline sem DAPT.**
+   ```bash
+   python ner_multiseed.py rodar     # padrão: bert+roberta, dapt+base, sementes 42–46
+   python ner_multiseed.py agregar   # gera experimentos/multiseed/resumo_multiseed.md
+   ```
 
-```bash
-python -m venv venv
+Hiperparâmetros (iguais para os dois modelos): MLM 15 %, sequência 512, batch efetivo 32 (4×8), 1 época; NER 5 épocas, batch efetivo 32 (16×2), warmup 0,1, weight decay 0,01, AdamW fundido, bf16, melhor época por F1 de validação.
 
-# Windows
-venv\Scripts\activate
+Nota de reprodutibilidade: o XLM-R foi adaptado com a versão do pipeline anterior à adição da retomada de checkpoint (diferença apenas na política de salvamento, sem efeito nos hiperparâmetros). Mesmo com a mesma semente, o F1 varia entre execuções por não determinismo da GPU, por isso os resultados são reportados como média de sementes.
 
-# Linux/Mac
-source venv/bin/activate
+## Dados
 
-pip install -r requirements.txt
-```
+- **Ulysses-Tesemô** — corpus jurídico-legislativo brasileiro.
+- **LeNER-Br** — [github.com/peluz/lener-br](https://github.com/peluz/lener-br) (baixado automaticamente pelo pipeline).
 
-### 4. Baixar o corpus Ulysses Tesemô
-
-O corpus está disponível no Google Drive (projeto Ulysses — Câmara dos Deputados):
-
-- [Link 1 — Google Drive](https://drive.google.com/drive/folders/1hRugg8mC5R_COB11DI3O1qOBaaXJxdx0)
-- [Link 2 — Google Drive](https://drive.google.com/drive/folders/1Sf9hNpoGO_hJtIvhsT1LvWyya0bnm70n)
-
-Baixe e extraia o conteúdo para a pasta `tesemo_raw/`:
-
-```
-JurisNER/
-└── tesemo_raw/
-    ├── J1/   ← Documentos judiciais
-    ├── L1/   ← Legislação federal
-    ├── L2/   ← Legislação estadual
-    └── ...
-```
-
-### 5. Limpar e dedupllicar o corpus
-
-```bash
-python tesemo_pipeline.py
-```
-
-Este script realiza, em paralelo:
-- Filtro de tamanho mínimo (< 200 caracteres)
-- Detecção de idioma (`langdetect`) — remove documentos fora do pt-BR
-- Deduplicação exata via SHA-256
-- Deduplicação fuzzy via MinHash LSH (threshold 85%)
-
-Os arquivos limpos são salvos em `tesemo_clean/` e um relatório CSV é gerado.
-
-> ⏱ Estimativa: ~1–2 horas (Ryzen 7 5700X, SSD)
-
-### 6. Treinar e avaliar os modelos
-
-**XLM-RoBERTa:**
-```bash
-# Certifique-se que TIPO_MODELO = "roberta" no script
-python jurisroberta_pipeline.py
-```
-
-**BERTimbau:**
-```bash
-# Altere TIPO_MODELO = "bert" no script
-python jurisroberta_pipeline.py
-```
-
-O pipeline executa automaticamente 4 etapas:
-
-| Etapa | Descrição |
-|---|---|
-| **1 — Corpus** | Lê `tesemo_clean/` e gera `corpus.jsonl` |
-| **2 — Tokenização** | Tokeniza e salva cache Arrow no SSD |
-| **3 — DAPT/MLM** | Pré-treinamento adicional com Masked Language Modeling |
-| **4 — NER** | Fine-tuning e avaliação no LENER-Br |
-
-Os resultados são salvos em `experimentos/{bert,roberta}/ner/resultados.json`.
-
-> ⏱ Estimativa total por modelo: ~12–20 horas (GPU RTX, corpus completo)
-
-### 7. Inferência com modelo treinado
-
-```bash
-python jurisroberta_pipeline.py --inferir
-```
-
-Exemplo de saída:
-```
-======================================================================
-TEXTO:
-O réu João da Silva interpôs recurso ao STF com base no art. 5º da Constituição Federal.
-======================================================================
-[PESSOA            ] João da Silva (score=0.998)
-[ORGANIZAÇÃO       ] STF (score=0.991)
-[LEGISLACAO        ] art. 5º da Constituição Federal (score=0.987)
-```
-
----
-
-## Datasets Utilizados
-
-| Dataset | Descrição | Link |
-|---|---|---|
-| **Ulysses Tesemô** | Corpus jurídico-legislativo brasileiro (~30 GB, 3,5M documentos) | [Paper](https://doi.org/10.1007/s10579-024-09762-8) |
-| **LENER-Br** | Corpus anotado para NER jurídico em português (6 categorias de entidades) | [GitHub](https://github.com/peluz/lener-br) |
-
-### Categorias de entidades do LENER-Br
-
-| Entidade | Exemplo |
-|---|---|
-| `PESSOA` | João da Silva, Ministra Rosa Weber |
-| `ORGANIZAÇÃO` | STF, Câmara dos Deputados, TJSP |
-| `LOCAL` | São Paulo, Vara Federal de Brasília |
-| `TEMPO` | 15 de março de 2024, prazo de 30 dias |
-| `LEGISLAÇÃO` | art. 5º da CF, Lei nº 7.347/85 |
-| `JURISPRUDÊNCIA` | RE 123.456/SP, Súmula 330 do STJ |
-
----
-
-## Dependências Principais
-
-```
-torch>=2.0
-transformers>=4.40
-datasets>=2.18
-seqeval
-langdetect
-datasketch
-tqdm
-```
-
-Instale todas com:
-```bash
-pip install -r requirements.txt
-```
-
----
-
-## Trabalhos Relacionados
-
-Este projeto se apoia nas seguintes referências principais:
-
-- **BERTimbau** — Souza et al. (2020): modelo BERT para português brasileiro
-- **LegalBERT** — Chalkidis et al. (2020): BERT especializado para textos jurídicos em inglês
-- **JurisBERT** — Viegas et al. (2023): BERT jurídico para português brasileiro
-- **RoBERTaLexPT** — Garcia et al. (2024): RoBERTa jurídico com deduplicação para português
-- **Ulysses Tesemô** — Siqueira et al. (2024): corpus jurídico-legislativo em português
-
----
+Os dados estão sujeitos às licenças originais. **Licença do código:** a definir pelo autor.
 
 ## Citação
 
-Se você usar este projeto em sua pesquisa, por favor cite:
-
 ```bibtex
-@monografia{costa2025jurisner,
-  author    = {Bruno Martins Costa},
-  title     = {Uma Adaptação da Arquitetura RoBERTa para o Domínio Jurídico Brasileiro},
-  school    = {Universidade Federal de Catalão},
-  year      = {2025},
-  type      = {Trabalho de Conclusão de Curso},
-  advisor   = {Marcio de Souza Dias}
+@monografia{costa2026jurisner,
+  author = {Bruno Martins Costa},
+  title  = {Adapta{\c c}{\~a}o de Dom{\'\i}nio de Modelos Transformer para Reconhecimento de Entidades Nomeadas Jur{\'\i}dicas: uma Compara{\c c}{\~a}o entre BERTimbau e XLM-RoBERTa},
+  school = {Universidade Federal de Catal{\~a}o},
+  year   = {2026},
+  type   = {Trabalho de Conclus{\~a}o de Curso}
 }
 ```
-
----
-
-## Licença
-
-Este projeto está licenciado sob a [MIT License](LICENSE).
-
-Os dados do **Ulysses Tesemô** e do **LENER-Br** estão sujeitos às suas próprias licenças — consulte os repositórios originais antes de usar em produção.
-
----
-
-## Contato
-
-**Bruno Martins Costa**  
-Universidade Federal de Catalão — UFCAT  
-Curso de Bacharelado em Ciências da Computação
