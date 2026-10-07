@@ -60,6 +60,9 @@ BATCH_SIZE    = 50_000   # arquivos por lote — ajuste se necessário
 
 DEFAULT_WORKERS = max(1, mp.cpu_count() - 2)  # 14 no 5700X
 
+# Atenção: a "categoria" é o nome da pasta de primeiro nível em maiúsculas (ex.: "JUDICIARIO"),
+# portanto este conjunto de códigos nunca é igualado e a detecção de idioma roda em todos os documentos.
+# Mantido sem alteração para preservar o comportamento usado nos experimentos.
 CATEGORIAS_SEGURAS = {
     "J1","J2","L1","L2","L3","L4","L5","L6","L7","L8","L9",
     "L10","L11","L12","L13","A2","O1","O2","O3","O6","O7",

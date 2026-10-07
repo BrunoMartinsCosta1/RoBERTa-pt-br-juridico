@@ -41,7 +41,7 @@ python -m venv venv && venv\Scripts\activate      # Linux: source venv/bin/activ
 python -m pip install -r requirements.txt
 ```
 
-1. **Corpus.** Baixe o Ulysses-Tesemô (ver [artigo](https://doi.org/10.1007/s10579-024-09762-8)) em `tesemo_raw/` e rode `python tesemo_pipeline.py` (gera `tesemo_clean/`; 796.402 documentos, 13,17 GB após a curadoria).
+1. **Corpus.** Baixe a categoria **Judiciário** do Ulysses-Tesemô (`tesemo_judiciario_v1.zip`; ver [artigo](https://doi.org/10.1007/s10579-024-09762-8)) e extraia em `tesemo_raw/judiciario/` e rode `python tesemo_pipeline.py` (gera `tesemo_clean/`). Dos 1.018.953 documentos de entrada, 796.402 (13,17 GB) permanecem após a curadoria: 3.185 removidos por tamanho, 90 por idioma, 19 por duplicata exata e 219.257 por duplicata aproximada. As demais categorias do Tesemô não foram usadas.
 2. **DAPT + NER (uma execução por modelo).** Em `jurisroberta_pipeline.py`, defina `TIPO_MODELO = "bert"` ou `"roberta"` e rode `python jurisroberta_pipeline.py`. Opções: `--so-ner` (pula DAPT, usa `experimentos/<modelo>/mlm`), `--inferir`. O DAPT salva checkpoints a cada 1000 passos e retoma sozinho se o processo for interrompido. Tempos observados: DAPT ≈ 6 h 25 (BERTimbau) e ≈ 10 h 16 (XLM-R); NER ≈ 26 min e ≈ 11 min.
 3. **Sementes e baseline sem DAPT.**
    ```bash
@@ -55,7 +55,7 @@ Nota de reprodutibilidade: o XLM-R foi adaptado com a versão do pipeline anteri
 
 ## Dados
 
-- **Ulysses-Tesemô** — corpus jurídico-legislativo brasileiro.
+- **Ulysses-Tesemô** — corpus jurídico-legislativo brasileiro (neste trabalho, apenas a categoria Judiciário).
 - **LeNER-Br** — [github.com/peluz/lener-br](https://github.com/peluz/lener-br) (baixado automaticamente pelo pipeline).
 
 Os dados estão sujeitos às licenças originais. **Licença do código:** a definir pelo autor.
